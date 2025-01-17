@@ -31,21 +31,27 @@ A real-time chat application built with Django for the backend and HTML, CSS, an
    git clone https://github.com/neszen/chat_app.git
    
 2. Navigate to the project directory:
-      cd chat_app
+   
+         cd chat_app
 
-3. Set up a virtual environment (optional but recommended):
+4. Set up a virtual environment (optional but recommended):
+   
+         python -m venv venv
+         source venv/bin/activate
 
-      python -m venv venv
-      source venv/bin/activate 
+5. Install the required dependencies:
+   
+         pip install -r requirements.txt
 
-4. Install the required dependencies:
-      pip install -r requirements.txt
+6. Apply database migrations:
+         
+         python manage.py makemigrations
+         python manage.py migrate
 
-5. Apply database migrations:
-      python manage.py migrate
+8. Create a superuser (to access the Django admin interface):
+   
+         python manage.py createsuperuser
 
-6. Create a superuser (to access the Django admin interface):
-      python manage.py createsuperuser
-
-7. Run the development server:
-      python manage.py runserver
+9. Run the development server:
+    
+         python manage.py runserver
