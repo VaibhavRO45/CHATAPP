@@ -28,7 +28,7 @@ A real-time chat application built with Django for the backend and HTML, CSS, an
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/neszen/chat_app.git
+   git clone https://github.com/VaibhavRO45/CHATAPP.git
    
 2. Navigate to the project directory:
    
