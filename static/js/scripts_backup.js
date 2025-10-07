@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const sendButton = document.querySelector("#submit_button");
   const myInput = document.querySelector("#my_input");
   const fileInput = document.querySelector("#file-input");
-const chatSocket = new WebSocket(`ws://${window.location.host}/ws/chat/${window.currentRoom}/`);
+  //const chatSocket = new WebSocket('ws://your-websocket-url');
 
   function scrollToBottom() {
     chatbox.scrollTop = chatbox.scrollHeight;
@@ -192,7 +192,6 @@ const chatSocket = new WebSocket(`ws://${window.location.host}/ws/chat/${window.
     }
 
     const messageDiv = document.createElement("div"); 
-    const fileDiv = document.createElement("div"); // Create a div for file messages
     messageDiv.classList.add("chat-message");
     // Fix message alignment: messages sent by current user should be on left side (sender class)
     // Messages from others on right side (receiver class)
@@ -223,46 +222,10 @@ const chatSocket = new WebSocket(`ws://${window.location.host}/ws/chat/${window.
     if (data.message) {
       const content = document.createElement("div");
       content.className = "message-content";
-      
-      // Handle text message
       let messageText = typeof data.message === 'object' ? data.message.text : data.message;
-      if (messageText) {
-        const textNode = document.createElement("p");
-        textNode.textContent = messageText;
-        content.appendChild(textNode);
-      }
+      content.textContent = messageText;
       
-      // Handle file attachment
-      if (data.file && typeof data.file === 'object') {
-        const fileName = data.file.name;
-        const fileUrl = data.file.url || `/media/${fileName}`;
-        const ext = fileName.split('.').pop().toLowerCase();
-      
-        const fileDiv = document.createElement("div");
-        fileDiv.className = "file-message";
-      
-        if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-          fileDiv.innerHTML = `<img src="${fileUrl}" class="img-fluid" alt="${fileName}" style="max-width: 200px; border-radius: 4px;" />`;
-        } else {
-          fileDiv.innerHTML = `
-            <div class="document-card">
-              <div class="document-icon">
-                <i class="fas ${getFileIcon(ext)} fa-2x"></i>
-              </div>
-              <div class="document-info">
-                <div class="document-name">${fileName}</div>
-                <div class="document-meta">
-                  <a href="${fileUrl}" class="document-download" download>Download</a>
-                </div>
-              </div>
-            </div>
-          `;
-        }
-      
-        content.appendChild(fileDiv);
-      }
-      
-      // Add delete buttons at bottom of content
+      // Add delete buttons if not deleted
       if (!data.is_deleted) {
         const actions = document.createElement("div");
         actions.className = "message-actions";
@@ -274,6 +237,32 @@ const chatSocket = new WebSocket(`ws://${window.location.host}/ws/chat/${window.
       }
       
       messageDiv.appendChild(content);
+    }
+
+    if (data.file) {
+      const fileDiv = document.createElement("div");
+      fileDiv.className = "file-message";
+      const fileUrl = data.file.startsWith('media/') ? `/${data.file}` : `/media/${data.file}`;
+      const ext = data.file.name.split('.').pop().toLowerCase();
+      if (['jpg', 'png', 'jpeg'].includes(ext)) {
+        fileDiv.innerHTML = `<img src="${fileUrl}" class="img-fluid" />`;
+      } else {
+        fileDiv.innerHTML = `
+          <div class="document-container">
+            <div class="document-icon">
+              <i class="fas ${getFileIcon(ext)}"></i>
+            </div>
+            <div class="document-info">
+              <div class="document-name">${data.file.name}</div>
+              <div class="document-meta">
+                <span>${formatFileSize(data.file.size)}</span>
+                <a href="${fileUrl}" class="document-download" download>Download</a>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      messageDiv.appendChild(fileDiv);
     }
     
     // Insert date separator if needed
@@ -572,36 +561,3 @@ function closeNav() {
   document.querySelector(".chat").classList.remove("sidebar-open");
   document.querySelector(".right-panel").style.display = "block";  // Show right panel
 }
-
-
-const gptForm = document.getElementById("gpt-form");
-const gptInput = document.getElementById("gpt-input");
-const gptMessages = document.getElementById("gpt-messages");
-
-gptForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const userMsg = gptInput.value;
-  if (!userMsg.trim()) return;
-
-  // Display user message
-  gptMessages.innerHTML += `<div><b>You:</b> ${userMsg}</div>`;
-  gptInput.value = "";
-
-  try {
-    const res = await fetch("/ask-gpt/", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userMsg })
-    });
-
-    const data = await res.json();
-    if (data.reply) {
-      gptMessages.innerHTML += `<div><b>ChatGPT:</b> ${data.reply}</div>`;
-    } else {
-      gptMessages.innerHTML += `<div><b>Error:</b> ${data.error}</div>`;
-    }
-    gptMessages.scrollTop = gptMessages.scrollHeight;
-  } catch (err) {
-    gptMessages.innerHTML += `<div><b>Error:</b> ${err.message}</div>`;
-  }
-});

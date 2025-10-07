@@ -1,121 +1,95 @@
-const chatbox = document.querySelector("#chatbox");
+/*const chatbox = document.querySelector("#chat-box");
+const sendButton = document.querySelector("#send-button");
 
 // Function to scroll to the bottom of the chatbox
 function scrollToBottom() {
-  chatbox.scrollTop = chatbox.scrollHeight;
+  if (chatbox && chatbox.scrollHeight) {
+    chatbox.scrollTop = chatbox.scrollHeight;
+  }
 }
 
 // Scroll to bottom when the page is loaded
 scrollToBottom();
 
-const roomName = JSON.parse(
-  document.getElementById("room_slug").textContent
-);
-const chatSocket = new WebSocket(
-  "ws://" + window.location.host + "/ws/chat/{{ room_name }}/"
-);
+// WebSocket connection
+const roomName = JSON.parse(document.getElementById("room_slug").textContent);
+const webSocketUrl = "ws://" + window.location.host + "/ws/chat/" + roomName + "/";
+const chatSocket = new WebSocket(webSocketUrl);
 
-chatSocket.onopen = function (e) {
-  console.log("The connection was set up successfully!");
-};
+// Handle incoming WebSocket messages
+chatSocket.onmessage = function (event) {
+    const data = JSON.parse(event.data);
+    const messageDiv = document.createElement("div");
+    messageDiv.classList.add("message");
 
-chatSocket.onclose = function (e) {
-  console.log("Something unexpected happened!");
-};
-
-document.querySelector("#my_input").focus();
-document.querySelector("#my_input").onkeyup = function (e) {
-  if (e.keyCode == 13) {
-    e.preventDefault();
-    document.querySelector("#submit_button").click();
-  }
-};
-
-document.querySelector("#submit_button").onclick = function (e) {
-  var messageInput = document.querySelector("#my_input").value;
-
-  if (messageInput.length == 0) {
-    alert("Add some input first or press the Send button!");
-  } else {
-    chatSocket.send(
-      JSON.stringify({
-        message: messageInput,
-        username: "{{ request.user.username }}",
-        room_name: "{{ room_name }}",
-      })
-    );
-    document.querySelector("#my_input").value = ""; // Clear input field after sending
-  }
-};
-
-// Update the onmessage function to update the chat list
-chatSocket.onmessage = function (e) {
-  const data = JSON.parse(e.data);
-
-  if (data.message && data.sender) {
-    // Display the new message in the chatbox
-    const chatbox = document.querySelector("#chatbox");
-    const noMessages = document.querySelector(".no-messages");
-    if (noMessages) {
-      noMessages.style.display = "none";
+    // Display message and file
+    if (data.file) {
+        if (data.file.endsWith(".jpg") || data.file.endsWith(".png") || data.file.endsWith(".jpeg")) {
+            messageDiv.innerHTML = `<img src="${data.file}" class="img-fluid" />`;
+        } else {
+            messageDiv.innerHTML = `<a href="${data.file}" target="_blank">Download file</a>`;
+        }
     }
 
-    const div = document.createElement("div");
-    div.className =
-      "chat-message " +
-      (data.sender === "{{ request.user.username }}"
-        ? "sender"
-        : "receiver");
-    div.innerHTML = `<div><span>${data.message}</span></div>`;
-    chatbox.appendChild(div);
-    // Scroll to the bottom of the chatbox
+    messageDiv.innerHTML += `<strong>${data.sender}:</strong> ${data.message}`;
+    chatbox.appendChild(messageDiv);
     scrollToBottom();
-
-    // Update the last message in the sidebar
-    const lastMessage = document.querySelector(
-      ".list-group-item.active #last-message"
-    );
-    if (lastMessage) {
-      lastMessage.innerHTML =
-        data.sender === "{{ request.user.username }}"
-          ? "You: " + data.message
-          : data.message;
-
-      // Update time format in UTC
-      const timestamp = document.querySelector(
-        ".list-group-item.active small"
-      );
-      const date = new Date().toUTCString();
-      timestamp.innerHTML = date.slice(17, 22);
-
-      // Update the chats list sorting by the last message timestamp in descending order
-      const chats = document.querySelectorAll(".list-group-item");
-      const chatsArray = Array.from(chats);
-      const chatsSorted = chatsArray.sort((a, b) => {
-        const aTime = a.querySelector("small").innerHTML;
-        const bTime = b.querySelector("small").innerHTML;
-        return aTime < bTime ? 1 : -1;
-      });
-
-      const contacts = document.querySelector(".contacts");
-      contacts.innerHTML = "";
-      chatsSorted.forEach((chat) => {
-        contacts.appendChild(chat);
-      });
-    } else {
-      console.error("No active chat selected");
-    }
-  } else {
-    console.error("Message or sender data is missing:", data);
-  }
 };
 
-function openNav() {
-  document.getElementById("mySidebar").classList.add("open");
-  document.querySelector(".chat").classList.add("sidebar-open");
-}
+// Send message or file
+sendButton.onclick = function (e) {
+    var messageInput = document.querySelector("#message-input").value;
+    var fileInput = document.querySelector("#file-input").files[0];
+    var selectedLanguage = document.querySelector("#language").value;
 
-function closeNav() {
-  document.getElementById("mySidebar").classList.remove("open");
-  document.querySelector(".chat").classList.remove("sidebar-open");
-}
+    if (!messageInput && !fileInput) {
+        alert("Please enter a message or select a file.");
+        return;
+    }
+
+    // Translate the message
+    var translatedMessage = translateMessage(messageInput, selectedLanguage);
+
+    // Send data through WebSocket
+    chatSocket.send(
+        JSON.stringify({
+            message: translatedMessage,
+            file: fileInput ? fileInput.name : null,
+            username: "{{ request.user.username }}",
+            room_name: "{{ room_name }}",
+        })
+    );
+
+    // Clear inputs
+    document.querySelector("#message-input").value = "";
+    document.querySelector("#file-input").value = "";
+};
+
+// Function to translate message using Django backend
+async function translateMessage(message, language) {
+    if (!message || language === 'en') return message;
+    
+    try {
+        const response = await fetch('/translate/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                text: message,
+                target_lang: language
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        if (data.error) {
+            console.error("Translation error:", data.error);
+            return message;
+        }
+*/
+

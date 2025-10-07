@@ -35,6 +35,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-fv@!-bs_yfk2!)c!8%$=qvhyxd)yfbo4z6cz&(eo@v6p2es7@6'
+#OPENAI_API_KEY = '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'
+HUGGINGFACE_API_KEY= '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'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -55,6 +57,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'chat',
     'users',
+    'sslserver'
 ]
 
 MIDDLEWARE = [
@@ -91,6 +94,30 @@ CHANNEL_LAYERS = {
         'BACKEND': 'channels.layers.InMemoryChannelLayer',
     },
 }
+"""CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('redis://FRVMsfQKKsb8FcID6aQz0QZR4rOAXX39@redis-12519.crce179.ap-south-1-1.ec2.redns.redis-cloud.com:12519')],  # Change to your Redis host and port
+        },
+    },
+}"""
+
+
+# settings.py
+"""
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            # Use the full Redis URL format with the password embedded
+            "hosts": [
+                "redis://default:BpZApCWjMFVfEWW1FpMpyYtlno944gN4@redis-16878.c305.ap-south-1-1.ec2.redns.redis-cloud.com:16878",
+            ],
+        },
+    },
+}
+"""
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
@@ -137,8 +164,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
-
+MEDIA_URL = 'media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 STATICFILES_DIRS = [BASE_DIR / 'static']
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

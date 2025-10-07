@@ -14,80 +14,17 @@
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css"
     />
-    <link rel="stylesheet" href="{% static 'css/chat.css' %}">
+    <link rel="stylesheet" href="{% static 'css/chat.css' %}"> 
     <style>
       /* Sticky Navbar */
-.navbar {
-  position: sticky;
-  margin-top:0px;
-  top: 0;
-  z-index: 1050; /* Make sure the navbar stays on top */
-}
-
-/* Fix right panel */
-.right-panel {
-  top: 0;
-  right: 0;
-  width: 25%; /* Adjust width as needed */
-  height: 100%;
-  padding: 20px;
-  background-color: #f8f9fa;
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
-  z-index: 1040; /* Make sure the right panel is above other content */
-}
-
-/* Adjust chat layout when the sidebar is open */
-.sidebar-open {
-  margin-right: 25%; /* Ensure chat area takes less space when sidebar is open */
-}
-.footer {
-  text-align: center;
-  padding: 10px;
-  background-color: #f8f9fa;
-  position: absolute;
-  bottom: -189px;
-  width: 100%;
-}
-
-/* Right panel default settings */
-.right-panel {
-  width: 25%;
-  height: 100%;
-  padding: 20px;
-  background-color: #f8f9fa;
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
-  z-index: 1040;
-  transition: all 0.3s ease; /* Smooth transition for collapsing */
-}
-
-/* Hide the right panel when the sidebar is open */
-.sidebar-open .right-panel {
-  display: none;
-}
-
-/* Left sidebar - make sure it's styled correctly */
-
-.sidebar.open {
-  display: block;
-}
-
-
-.chat {
-  transition: margin-left 0.3s ease;
-}
-
-.sidebar-open .chat {
-  margin-left: 250px; /* Shifts the chat area when sidebar is open */
-}
-
 
 
 </style>
   </head>
-  <body style="height: 110vh; display: flex; flex-direction: column">
+  <body style="height: 100vh; display: flex; flex-direction: column">
     
-         <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
-        <a class="navbar-brand" href="#">CHATAPP</a>
+        <nav class="navbar navbar-expand-lg navbar-light bg-light fixed-top">
+        <a class="navbar-brand" href="#">Connectify</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -119,8 +56,9 @@
           <h5 class="mb-3 text-white">Chats</h5>
 
           <div class="contacts">
+            <h6 class="text-white">Users</h6>
             {% for item in user_last_messages %}
-            <a href="{% url 'chat' item.user.username %}" class="list-group-item list-group-item-action {% if item.user.username == room_name %} active {% endif %}">
+            <a href="{% url 'chat_room' item.user.username %}" class="list-group-item list-group-item-action {% if item.user.username == room_name %} active {% endif %}">
               <div class="d-flex align-items-center">
                 <!-- Profile Icon -->
                 <img
@@ -153,6 +91,34 @@
               </div>
             </a>
             {% endfor %}
+
+            <h6 class="text-white mt-4">Groups</h6>
+            {% for group in groups %}
+<a href="{% url 'chat_room' group.name %}" class="list-group-item list-group-item-action {% if group.name == room_name %} active {% endif %}">
+              <div class="d-flex align-items-center">
+                <!-- Group Icon -->
+                <img
+                  src="https://ui-avatars.com/api/?name={{ group.name|urlencode }}&size=64&background=random&bold=true&color=fff"
+                  alt="{{ group.name }} Group Icon"
+                  class="profile-icon rounded-circle mr-3"
+                  style="width: 1.8rem; height: 1.8rem; object-fit: cover; background-color: #007bff;"
+                />
+                <div class="w-100">
+                  <div class="d-flex justify-content-between">
+                    <strong class="text-truncate">{{ group.name }}</strong>
+                    <!-- Optionally, show last message timestamp for group -->
+                  </div>
+                  <div>
+                    <small class="d-block text-truncate last-msg" style="max-width: 90%">
+                      Group chat
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </a>
+            {% endfor %}
+
+            <a href="{% url 'create_group' %}" class="btn btn-sm btn-light mt-3 w-100">+ Create Group</a>
           </div>
 
           <div class="logout">
@@ -167,7 +133,8 @@
         <!-- Chat Area (8 Columns) -->
         <div class="col-9 d-flex flex-column chat" data-id="{{ room_name }}">
           <!-- Chat Header -->
-          <div class="d-flex align-items-center p-1">
+          <div class="d-flex align-items-center p-5">
+            <div id="connection-status" class="mr-2" style="width: 10px; height: 10px; border-radius: 50%; background-color: gray;"></div>
             <img
               src="https://ui-avatars.com/api/?name={{ room_name|urlencode }}&size=64&background=random"
               style="border-radius: 50%; height: 45px; width: auto"
@@ -193,11 +160,89 @@
 
           <!-- Chatbox -->
           <div id="chatbox" class="chatbox flex-fill p-3">
-            {% if chats %} {% for message in chats %}
-            <div class="chat-message {% if message.sender == request.user %} sender {% else %} receiver {% endif %}">
-              <span>{{ message.content }}</span>
-            </div>
-            {% endfor %} {% else %}
+            {% if chats %}
+            {% regroup chats by timestamp.date as date_groups %}
+            {% for date_group in date_groups %}
+              <div class="date-separator">{{ date_group.grouper|date:"F j, Y" }}</div>
+              {% for message in date_group.list %}
+                <div class="chat-message {% if message.sender == request.user %} sender {% else %} receiver {% endif %}" data-message-id="{{ message.id }}">
+                  <div class="message-header">
+                    <strong>{{ message.sender.username }}</strong>
+                    <small class="timestamp">{{ message.timestamp|date:"H:i" }}</small>
+                  </div>
+                  
+                  <div class="message-content">
+                    {% if message.file %}
+                    <div class="file-message">
+                      <br>
+                      {% with message.file.name|lower as filename %}
+                      {% if filename|slice:'-4:' == ".pdf" %}
+                        <div class="document-card">
+                          <div class="document-icon">
+                            <i class="fas fa-file-pdf fa-2x"></i>
+                          </div>
+                          <div class="document-info">
+                            <div class="document-name">{{ message.file.name }}</div>
+                            <div class="document-meta">
+                              <a href="{{ message.file.url }}" class="document-download" download>Download</a>
+                            </div>
+                          </div>
+                        </div>
+                      {% elif filename|slice:'-5:' == ".docx" or filename|slice:'-4:' == ".doc" %}
+                        <div class="document-card">
+                          <div class="document-icon">
+                            <i class="fas fa-file-word fa-2x"></i>
+                          </div>
+                          <div class="document-info">
+                            <div class="document-name">{{ message.file.name }}</div>
+                            <div class="document-meta">
+                              <a href="{{ message.file.url }}" class="document-download" download>Download</a>
+                            </div>
+                          </div>
+                        </div>
+                      {% elif filename|slice:'-4:' == ".jpg" or filename|slice:'-4:' == ".jpeg" or filename|slice:'-4:' == ".png" %}
+                        <div class="image-card">
+                          <img src="{{ message.file.url }}" alt="Image" class="image-preview" />
+                        </div>
+                      {% elif filename|slice:'-4:' == ".gif" %}
+                        <div class="image-card">
+                          <img src="{{ message.file.url }}" alt="GIF" class="image-preview" />
+                        </div>
+                      {% else %}
+                        <div class="document-card">
+                          <div class="document-icon">
+                            <i class="fas fa-file fa-2x"></i>
+                          </div>
+                          <div class="document-info">
+                            <div class="document-name">{{ message.file.name }}</div>
+                            <div class="document-meta">
+                              <a href="{{ message.file.url }}" class="document-download" download>Download</a>
+                            </div>
+                          </div>
+                        </div>
+                      {% endif %}
+                    {% endwith %}
+                    
+                    </div>
+                  {% endif %}
+                    {% if message.is_deleted or request.user in message.deleted_for.all %}
+                    <span class="deleted-message">This message was deleted</span>
+                    {% else %}
+                    {{ message.content }}
+                    {% endif %}
+                    {% if not message.is_deleted and request.user not in message.deleted_for.all %}
+                    <div class="message-actions">
+                      <button class="delete-btn" data-action="me">Delete for me</button>
+                      {% if message.sender == request.user %}
+                      <button class="delete-btn" data-action="all">Delete for everyone</button>
+                      {% endif %}
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+              {% endfor %}
+            {% endfor %}
+            {% else %}
             <p class="no-messages">No Messages.</p>
             {% endif %}
           </div>
@@ -212,6 +257,17 @@
                 placeholder="Type a message..."
                 required
               />
+              <button type="button" id="voice-btn" class="voice-btn" title="Start voice typing">
+                <i class="fas fa-microphone"></i>
+              </button>
+              <button type="button" id="emoji-btn" class="emoji-btn">
+                <i class="fas fa-smile"></i>
+              </button>
+              <label for="file-input" class="file-input-label">
+                <i class="fas fa-paperclip"></i>
+                <input type="file" id="file-input" accept="image/*,application/pdf,.doc,.docx,.txt,.rtf" style="display: none;" />
+              </label>
+              <emoji-picker id="emoji-picker"></emoji-picker>
               <div class="input-group-append">
                 <button
                   id="submit_button"
@@ -227,11 +283,20 @@
 
         <!-- Right Panel -->
         <div class="right-panel">
-          <h3>Right Panel</h3>
-          <p>This is the right panel where you can add additional information or ads.</p>
+          <div class="chatgpt-panel" id="chatgpt-panel">
+            <div class="chatgpt-header">🤖 Ask ChatGPT</div>
+            <div class="chatgpt-messages" id="gpt-messages"></div>
+            <form id="gpt-form">
+              <input type="text" id="gpt-input" placeholder="Ask something..." />
+              <button type="submit">Send</button>
+            </form>
+          </div>
+          
+        <div id ="google_element">Hide </div>
         </div>
 
       </div>
+
     </div>
 
     <!-- Footer -->
@@ -241,133 +306,58 @@
 
     {{slug|json_script:"room_slug"}}
 
+    <script src="http://translate.google.com/translate_a/element.js?cb=loadGoogleTranslate"></script>
+  
+
     <script>
-      const chatbox = document.querySelector("#chatbox");
-
-      // Function to scroll to the bottom of the chatbox
-      function scrollToBottom() {
-        chatbox.scrollTop = chatbox.scrollHeight;
-      }
-
-      // Scroll to bottom when the page is loaded
-      scrollToBottom();
-
       const roomName = JSON.parse(
         document.getElementById("room_slug").textContent
       );
-      const chatSocket = new WebSocket(
-        "ws://" + window.location.host + "/ws/chat/{{ room_name }}/"
+
+      const ws_scheme = window.location.protocol == 'https:' ? 'wss' : 'ws';
+      let chatSocket = new WebSocket(ws_scheme + 
+        "://" + window.location.host + "/ws/chat/{{ room_name }}/"
       );
 
+      const statusIndicator = document.getElementById('connection-status');
+
       chatSocket.onopen = function (e) {
-        console.log("The connection was set up successfully!");
+        console.log("WebSocket connection established successfully!");
+        statusIndicator.style.backgroundColor = 'green';
       };
+
+      chatSocket.onerror = function(error) {
+        console.error('WebSocket error:', error);
+        statusIndicator.style.backgroundColor = 'red';
+      };
+
       chatSocket.onclose = function (e) {
-        console.log("Something unexpected happened!");
-      };
-
-      document.querySelector("#my_input").focus();
-      document.querySelector("#my_input").onkeyup = function (e) {
-        if (e.keyCode == 13) {
-          e.preventDefault();
-          document.querySelector("#submit_button").click();
-        }
-      };
-
-      document.querySelector("#submit_button").onclick = function (e) {
-        var messageInput = document.querySelector("#my_input").value;
-
-        if (messageInput.length == 0) {
-          alert("Add some input first or press the Send button!");
-        } else {
-          chatSocket.send(
-            JSON.stringify({
-              message: messageInput,
-              username: "{{ request.user.username }}",
-              room_name: "{{ room_name }}",
-            })
+        console.log("WebSocket connection closed. Attempting to reconnect...");
+        statusIndicator.style.backgroundColor = 'orange';
+        setTimeout(function() {
+          const newSocket = new WebSocket(ws_scheme + 
+            "://" + window.location.host + "/ws/chat/{{ room_name }}/"
           );
-          document.querySelector("#my_input").value = ""; // Clear input field after sending
-        }
+          newSocket.onopen = chatSocket.onopen;
+          newSocket.onmessage = chatSocket.onmessage;
+          newSocket.onerror = chatSocket.onerror;
+          newSocket.onclose = chatSocket.onclose;
+          chatSocket = newSocket;
+        }, 3000);
       };
 
-      // Update the onmessage function to update the chat list
-      chatSocket.onmessage = function (e) {
-        const data = JSON.parse(e.data);
-
-        if (data.message && data.sender) {
-          // Display the new message in the chatbox
-          const chatbox = document.querySelector("#chatbox");
-          const noMessages = document.querySelector(".no-messages");
-          if (noMessages) {
-            noMessages.style.display = "none";
-          }
-
-          const div = document.createElement("div");
-          div.className =
-            "chat-message " +
-            (data.sender === "{{ request.user.username }}"
-              ? "sender"
-              : "receiver");
-          div.innerHTML = `<div><span>${data.message}</span></div>`;
-          chatbox.appendChild(div);
-          // Scroll to the bottom of the chatbox
-          scrollToBottom();
-
-          // Update the last message in the sidebar
-          const lastMessage = document.querySelector(
-            ".list-group-item.active #last-message"
-          );
-          if (lastMessage) {
-            lastMessage.innerHTML =
-              data.sender === "{{ request.user.username }}"
-                ? "You: " + data.message
-                : data.message;
-
-            // update time format in UTC
-            const timestamp = document.querySelector(
-              ".list-group-item.active small"
-            );
-            const date = new Date().toUTCString();
-            timestamp.innerHTML = date.slice(17, 22);
-
-            // update the chats list sorting by the last message timestamp in descending order
-            const chats = document.querySelectorAll(".list-group-item");
-            const chatsArray = Array.from(chats);
-            const chatsSorted = chatsArray.sort((a, b) => {
-              const aTime = a.querySelector("small").innerHTML;
-              const bTime = b.querySelector("small").innerHTML;
-              return aTime < bTime ? 1 : -1;
-            });
-
-            const contacts = document.querySelector(".contacts");
-            contacts.innerHTML = "";
-            chatsSorted.forEach((chat) => {
-              contacts.appendChild(chat);
-            });
-          } else {
-            console.error("No active chat selected");
-          }
-        } else {
-          console.error("Message or sender data is missing:", data);
-        }
-      };
-
-      // Open the sidebar and hide the right panel
-function openNav() {
-  document.getElementById("mySidebar").classList.add("open");
-  document.querySelector(".chat").classList.add("sidebar-open");
-  document.querySelector(".right-panel").style.display = "none";  // Hide right panel
-}
-
-// Close the sidebar and show the right panel
-function closeNav() {
-  document.getElementById("mySidebar").classList.remove("open");
-  document.querySelector(".chat").classList.remove("sidebar-open");
-  document.querySelector(".right-panel").style.display = "block";  // Show right panel
-}
+       function loadGoogleTranslate(){
+        new google.translate.TranslateElement("google_element");
+      }
 
     </script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
+    <script>
+      // Expose current username and room name to JS
+      window.currentUser = "{{ request.user.username }}";
+      window.currentRoom = "{{ room_name }}";
+    </script>
     <script src="{% static 'js/scripts.js' %}"></script>
+    
   </body>
 </html>
